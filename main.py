@@ -1,27 +1,4 @@
-[5:19 p.m., 3/8/2025] Chrisstopher Luna: [
-  {
-    "domain": ".usvisa-info.com",
-    "name": "_gid",
-    "value": "GA1.2.313422905.1754260720",
-    "path": "/",
-    "secure": false,
-    "httpOnly": false,
-    "expirationDate": 1754348100
-  },
-  {
-    "domain": ".usvisa-info.com",
-    "name": "_ga",
-    "value": "GA1.2.1513135572.1754260720",
-    "path": "/",
-    "secure": false,
-    "httpOnly": false,
-    "expirationDate": 1788821700
-  },
-  {
-    "domain": "ais.usvisa-info.com",
-    "name": "_yatri_session",
-    "value": "lSAMbVzv5o2qSWNdgJTqyMZytkmng3GieAeL8DliHuqfsUAURoHu5dcWptUHDTI1MEAAKA5pUHM32OflJjrH0HFZ2L9fILYNtlVtaK236PTTzvEH4iE8%2B3Dn%2FCt68m5AnSffHaPTLXY99i0CYhxyQv3%2F2Yg6lUXOq8hwPUXkEoh3YOoXbJgi6UqC0q3Rzf7utRfUqLFJddj%2BDmLUPo8jrjp94yqoqv53WVlQjnLvx5dYK04EvP1tuhO3CYTZ0XnfWgTKipzC5CINj28tQ…
-[5:24 p.m., 3/8/2025] Chrisstopher Luna: import requests
+import requests
 import os
 import json
 
@@ -48,5 +25,5 @@ def revisar_citas():
     else:
         print("✅ ¡Podría haber citas disponibles!")
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     revisar_citas()
