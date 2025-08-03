@@ -40,7 +40,7 @@ def check_appointment():
         print("Error al consultar:", e)
 
 # ==== Loop continuo ====
-if _name_ == "_main_":
+if __name__ == "__main__":
     while True:
         check_appointment()
         time.sleep(CHECK_INTERVAL_SECONDS)
