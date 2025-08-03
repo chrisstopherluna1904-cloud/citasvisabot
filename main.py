@@ -1,46 +1,52 @@
-import requests
-import time
+[5:19 p.m., 3/8/2025] Chrisstopher Luna: [
+  {
+    "domain": ".usvisa-info.com",
+    "name": "_gid",
+    "value": "GA1.2.313422905.1754260720",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "expirationDate": 1754348100
+  },
+  {
+    "domain": ".usvisa-info.com",
+    "name": "_ga",
+    "value": "GA1.2.1513135572.1754260720",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "expirationDate": 1788821700
+  },
+  {
+    "domain": "ais.usvisa-info.com",
+    "name": "_yatri_session",
+    "value": "lSAMbVzv5o2qSWNdgJTqyMZytkmng3GieAeL8DliHuqfsUAURoHu5dcWptUHDTI1MEAAKA5pUHM32OflJjrH0HFZ2L9fILYNtlVtaK236PTTzvEH4iE8%2B3Dn%2FCt68m5AnSffHaPTLXY99i0CYhxyQv3%2F2Yg6lUXOq8hwPUXkEoh3YOoXbJgi6UqC0q3Rzf7utRfUqLFJddj%2BDmLUPo8jrjp94yqoqv53WVlQjnLvx5dYK04EvP1tuhO3CYTZ0XnfWgTKipzC5CINj28tQ…
+[5:24 p.m., 3/8/2025] Chrisstopher Luna: import requests
+import os
 import json
 
-# ==== CONFIGURACIÓN DEL USUARIO ====
-TELEGRAM_BOT_TOKEN = "6750084511:AAHPQwYcYBQOv0kBoOBbcS3HLaZX9LmPK8I"
-TELEGRAM_USER_ID = "687136291"
-CHECK_INTERVAL_SECONDS = 60  # 1 minuto
+def cargar_cookies_desde_variable():
+    cookie_str = os.environ.get("COOKIE_JSON")
+    if not cookie_str:
+        raise ValueError("No se encontró la variable COOKIE_JSON.")
+    return json.loads(cookie_str)
 
-# ==== URL de verificación (ajusta si es necesario) ====
-APPOINTMENT_URL = "https://ais.usvisa-info.com/es-mx/niv/schedule/53819864/appointment"
+def revisar_citas():
+    cookies = cargar_cookies_desde_variable()
 
-# ==== Cargar cookies ====
-def load_cookies():
-    with open("cookie.json", "r") as f:
-        cookies = json.load(f)
-    return {cookie['name']: cookie['value'] for cookie in cookies}
+    session = requests.Session()
+    for cookie in cookies:
+        session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
 
-# ==== Función para mandar mensaje por Telegram ====
-def send_telegram_message(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    data = {"chat_id": TELEGRAM_USER_ID, "text": message}
-    requests.post(url, data=data)
+    # Aquí va tu URL real de revisión de citas
+    url = "https://ais.usvisa-info.com/es-mx/niv/schedule/{tu_cita_id}"
 
-# ==== Función principal ====
-def check_appointment():
-    cookies = load_cookies()
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Referer": APPOINTMENT_URL
-    }
+    response = session.get(url)
+    
+    if "No hay citas disponibles" in response.text:
+        print("❌ No hay citas disponibles.")
+    else:
+        print("✅ ¡Podría haber citas disponibles!")
 
-    try:
-        response = requests.get(APPOINTMENT_URL, headers=headers, cookies=cookies)
-        if "Ya tienes una cita programada" not in response.text:
-            send_telegram_message("🔔 ¡Parece que hay una cita disponible!")
-        else:
-            print("Sin cambios en la cita.")
-    except Exception as e:
-        print("Error al consultar:", e)
-
-# ==== Loop continuo ====
-if __name__ == "__main__":
-    while True:
-        check_appointment()
-        time.sleep(CHECK_INTERVAL_SECONDS)
+if _name_ == "_main_":
+    revisar_citas()
