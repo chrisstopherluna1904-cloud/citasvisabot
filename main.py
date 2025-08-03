@@ -1,29 +1,67 @@
-import requests
 import os
 import json
+import time
+import requests
+from bs4 import BeautifulSoup
+from telegram import Bot
 
-def cargar_cookies_desde_variable():
-    cookie_str = os.environ.get("COOKIE_JSON")
-    if not cookie_str:
-        raise ValueError("No se encontró la variable COOKIE_JSON.")
-    return json.loads(cookie_str)
+# Cargar cookies desde variable de entorno segura
+cookie_str = os.environ.get("COOKIE_JSON")
+if not cookie_str:
+    raise ValueError("Falta la variable COOKIE_JSON")
+cookies = json.loads(cookie_str)
 
-def revisar_citas():
-    cookies = cargar_cookies_desde_variable()
+# Tus datos de Telegram
+TELEGRAM_TOKEN = "6994692951:AAEIzW2Q9Wx5AmZD6uyAdwDJ98wDFeJVxz0"
+TELEGRAM_CHAT_ID = "6667646965"
+bot = Bot(token=TELEGRAM_TOKEN)
 
-    session = requests.Session()
-    for cookie in cookies:
-        session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
+# URL con tu user_id real
+URL = "https://ais.usvisa-info.com/es-mx/niv/schedule/15202751/appointment"
 
-    # Aquí va tu URL real de revisión de citas
-    url = "https://ais.usvisa-info.com/es-mx/niv/schedule/{tu_cita_id}"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0",
+    "Accept-Language": "es-ES,es;q=0.9"
+}
 
-    response = session.get(url)
-    
-    if "No hay citas disponibles" in response.text:
-        print("❌ No hay citas disponibles.")
+ultima_fecha_enviada = ""
+
+def revisar_disponibilidad():
+    global ultima_fecha_enviada
+
+    print("Revisando disponibilidad de citas...")
+    try:
+        response = requests.get(URL, headers=HEADERS, cookies=cookies)
+        response.raise_for_status()
+    except Exception as e:
+        print("Error en la petición:", e)
+        return
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Buscar el texto con la fecha más cercana
+    fecha = None
+    try:
+        # Esto puede necesitar ajustes dependiendo del HTML actual
+        h3 = soup.find("h3", string=lambda t: "Disponible" in t if t else False)
+        if h3:
+            fecha = h3.text.strip()
+    except Exception as e:
+        print("Error al procesar HTML:", e)
+
+    if fecha and fecha != ultima_fecha_enviada:
+        ultima_fecha_enviada = fecha
+        mensaje = f"📅 ¡Nueva cita disponible!\n\n{fecha}\n\n🔗 {URL}"
+        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=mensaje)
+        print("Notificación enviada.")
     else:
-        print("✅ ¡Podría haber citas disponibles!")
+        print("Sin cambios en las citas.")
 
+# Loop principal: revisa cada minuto
 if __name__ == "__main__":
-    revisar_citas()
+    while True:
+        try:
+            revisar_disponibilidad()
+        except Exception as e:
+            print("Error en el ciclo principal:", e)
+        time.sleep(60)
