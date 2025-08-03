@@ -3,12 +3,12 @@ import time
 import json
 
 # ==== CONFIGURACIÓN DEL USUARIO ====
-TELEGRAM_BOT_TOKEN = "TU_TOKEN_DE_BOT"
-TELEGRAM_USER_ID = "TU_USER_ID"
+TELEGRAM_BOT_TOKEN = "6750084511:AAHPQwYcYBQOv0kBoOBbcS3HLaZX9LmPK8I"
+TELEGRAM_USER_ID = "687136291"
 CHECK_INTERVAL_SECONDS = 60  # 1 minuto
 
-# ==== URL de verificación (reemplaza por la tuya exacta si cambia) ====
-APPOINTMENT_URL = "https://ais.usvisa-info.com/es-mx/niv/schedule/xxxxx/appointment"
+# ==== URL de verificación (ajusta si es necesario) ====
+APPOINTMENT_URL = "https://ais.usvisa-info.com/es-mx/niv/schedule/53819864/appointment"
 
 # ==== Cargar cookies ====
 def load_cookies():
