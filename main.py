@@ -1,71 +1,46 @@
 import requests
 import time
-from bs4 import BeautifulSoup
-from telegram import Bot
+import json
 
-# DATOS REALES
-TELEGRAM_TOKEN = "6775977127:AAGWEpI9y9ZLZ9RHutvtrQvATzRivm9Xbqs"
-TELEGRAM_CHAT_ID = "542595976"
-URL_CITAS = "https://ais.usvisa-info.com/es-mx/niv/schedule/48812804/appointment"
-COOKIES = {
-    "_yatri_session": "1pEyUKE+MvhLB2NSBL+ymqQci8SxgdV5DEBiUaaHTm9D0dnZxd5a2m8R52RQJSjPWViSKtS3q2zJq58T4OY9RxFGBTL1QZcHNOv8d5YXTVg="
-}
+# ==== CONFIGURACIÓN DEL USUARIO ====
+TELEGRAM_BOT_TOKEN = "TU_TOKEN_DE_BOT"
+TELEGRAM_USER_ID = "TU_USER_ID"
+CHECK_INTERVAL_SECONDS = 60  # 1 minuto
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0"
-}
+# ==== URL de verificación (reemplaza por la tuya exacta si cambia) ====
+APPOINTMENT_URL = "https://ais.usvisa-info.com/es-mx/niv/schedule/xxxxx/appointment"
 
-# Buscar citas antes de esta fecha (año, mes, día)
-UMBRAL_FECHA = (2026, 6, 1)  # ejemplo: cualquier cita antes de junio 2026
+# ==== Cargar cookies ====
+def load_cookies():
+    with open("cookie.json", "r") as f:
+        cookies = json.load(f)
+    return {cookie['name']: cookie['value'] for cookie in cookies}
 
-def obtener_fecha():
+# ==== Función para mandar mensaje por Telegram ====
+def send_telegram_message(message):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    data = {"chat_id": TELEGRAM_USER_ID, "text": message}
+    requests.post(url, data=data)
+
+# ==== Función principal ====
+def check_appointment():
+    cookies = load_cookies()
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Referer": APPOINTMENT_URL
+    }
+
     try:
-        response = requests.get(URL_CITAS, cookies=COOKIES, headers=HEADERS)
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        tag = soup.find("h3")
-        if not tag:
-            return None
-
-        fecha_str = tag.get_text(strip=True)
-        print(f"[INFO] Fecha encontrada: {fecha_str}")
-
-        meses = {
-            'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 'mayo': 5,
-            'junio': 6, 'julio': 7, 'agosto': 8, 'septiembre': 9,
-            'octubre': 10, 'noviembre': 11, 'diciembre': 12
-        }
-
-        partes = fecha_str.lower().split()
-        if len(partes) != 3:
-            return None
-
-        dia = int(partes[0])
-        mes = meses.get(partes[1], 0)
-        año = int(partes[2])
-        return (año, mes, dia)
-
+        response = requests.get(APPOINTMENT_URL, headers=headers, cookies=cookies)
+        if "Ya tienes una cita programada" not in response.text:
+            send_telegram_message("🔔 ¡Parece que hay una cita disponible!")
+        else:
+            print("Sin cambios en la cita.")
     except Exception as e:
-        print(f"[ERROR] Al obtener fecha: {e}")
-        return None
+        print("Error al consultar:", e)
 
-def enviar_telegram(mensaje):
-    try:
-        bot = Bot(token=TELEGRAM_TOKEN)
-        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=mensaje)
-        print("[INFO] Notificación enviada")
-    except Exception as e:
-        print(f"[ERROR] Al enviar Telegram: {e}")
-
-def es_menor(fecha):
-    return fecha < UMBRAL_FECHA
-
-# Bucle principal
-while True:
-    fecha = obtener_fecha()
-
-    if fecha and es_menor(fecha):
-        mensaje = f"¡Nueva cita disponible! 📅 {fecha[2]}/{fecha[1]}/{fecha[0]}\n{URL_CITAS}"
-        enviar_telegram(mensaje)
-
-    time.sleep(60)  # Espera 60 segundos
+# ==== Loop continuo ====
+if _name_ == "_main_":
+    while True:
+        check_appointment()
+        time.sleep(CHECK_INTERVAL_SECONDS)
