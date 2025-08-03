@@ -1,67 +1,53 @@
 import os
 import json
-import time
 import requests
-from bs4 import BeautifulSoup
+import time
 from telegram import Bot
 
-# Cargar cookies desde variable de entorno segura
-cookie_str = os.environ.get("COOKIE_JSON")
+# === CONFIGURACIÓN ===
+TELEGRAM_BOT_TOKEN = '6733370659:AAGYJqA7UxqD6K2-rXygTSXfpFeR7dN9jS8'
+TELEGRAM_USER_ID = '5421325452'
+
+# Cargar la cookie desde la variable de entorno
+cookie_str = os.environ.get("COOKIE_JSON", "")
 if not cookie_str:
-    raise ValueError("Falta la variable COOKIE_JSON")
-cookies = json.loads(cookie_str)
+    raise ValueError("La variable de entorno COOKIE_JSON está vacía o no fue configurada")
 
-# Tus datos de Telegram
-TELEGRAM_TOKEN = "6994692951:AAEIzW2Q9Wx5AmZD6uyAdwDJ98wDFeJVxz0"
-TELEGRAM_CHAT_ID = "6667646965"
-bot = Bot(token=TELEGRAM_TOKEN)
+try:
+    cookie_dict = json.loads(cookie_str)
+except json.JSONDecodeError:
+    raise ValueError("COOKIE_JSON no es un JSON válido")
 
-# URL con tu user_id real
-URL = "https://ais.usvisa-info.com/es-mx/niv/schedule/15202751/appointment"
+session = requests.Session()
+session.cookies.update(cookie_dict)
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0",
-    "Accept-Language": "es-ES,es;q=0.9"
-}
+bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
-ultima_fecha_enviada = ""
+# === FUNCIÓN PRINCIPAL ===
+def verificar_cita():
+    url = "https://ais.usvisa-info.com/es-mx/niv/schedule/54711790/appointment/days/115.html?appointments[expedite]=false"
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "application/json"
+    }
 
-def revisar_disponibilidad():
-    global ultima_fecha_enviada
-
-    print("Revisando disponibilidad de citas...")
     try:
-        response = requests.get(URL, headers=HEADERS, cookies=cookies)
-        response.raise_for_status()
+        response = session.get(url, headers=headers)
+        if response.status_code == 200:
+            fechas = response.json()
+            if fechas:
+                fecha_mas_cercana = fechas[0]["date"]
+                mensaje = f"📅 ¡Cita disponible!\nFecha más cercana: {fecha_mas_cercana}"
+                bot.send_message(chat_id=TELEGRAM_USER_ID, text=mensaje)
+            else:
+                print("Sin fechas disponibles por ahora.")
+        else:
+            print(f"Error al consultar: {response.status_code}")
     except Exception as e:
-        print("Error en la petición:", e)
-        return
+        print(f"Error al verificar cita: {e}")
 
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    # Buscar el texto con la fecha más cercana
-    fecha = None
-    try:
-        # Esto puede necesitar ajustes dependiendo del HTML actual
-        h3 = soup.find("h3", string=lambda t: "Disponible" in t if t else False)
-        if h3:
-            fecha = h3.text.strip()
-    except Exception as e:
-        print("Error al procesar HTML:", e)
-
-    if fecha and fecha != ultima_fecha_enviada:
-        ultima_fecha_enviada = fecha
-        mensaje = f"📅 ¡Nueva cita disponible!\n\n{fecha}\n\n🔗 {URL}"
-        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=mensaje)
-        print("Notificación enviada.")
-    else:
-        print("Sin cambios en las citas.")
-
-# Loop principal: revisa cada minuto
+# === LOOP INFINITO (verifica cada minuto) ===
 if __name__ == "__main__":
     while True:
-        try:
-            revisar_disponibilidad()
-        except Exception as e:
-            print("Error en el ciclo principal:", e)
-        time.sleep(60)
+        verificar_cita()
+        time.sleep(60)  # Esperar 1 minuto entre cada chequeo
