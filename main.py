@@ -2,53 +2,58 @@ import os
 import json
 import time
 import requests
-import telegram
-from bs4 import BeautifulSoup
+from telegram import Bot
 
-# Cargar TOKEN y USER_ID directamente
-TELEGRAM_BOT_TOKEN = '6678632346:AAFYoQoW-LchG3cKDbYBlRWTmLKkUZ_kkeY'
-USER_ID = 1410074532
+print("🚀 Iniciando bot...")
 
-# Inicializar bot
-bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
+# Leer variable de entorno
+cookie_str = os.environ.get("COOKIE_JSON")
+if not cookie_str:
+    print("❌ COOKIE_JSON no está definida en variables de entorno.")
+    exit(1)
 
-# Leer cookies desde variable de entorno
-cookies_str = os.getenv("COOKIE_JSON")
-if not cookies_str:
-    raise Exception("COOKIE_JSON no está definida en las variables de entorno")
+print("✅ COOKIE_JSON detectada. Cargando...")
 
-cookies = json.loads(cookies_str)
+try:
+    cookies = json.loads(cookie_str)
+    print("✅ Cookies cargadas correctamente.")
+except json.JSONDecodeError as e:
+    print(f"❌ Error al decodificar COOKIE_JSON: {e}")
+    exit(1)
 
-# URL de la página de citas (ajusta si es otra)
-URL = "https://ais.usvisa-info.com/es-mx/niv/schedule/44200000/appointment"
+# Tus datos de Telegram
+BOT_TOKEN = "6622686812:AAH-BsmtehRjZKiVkoKwDkgqladmeXZikn4"
+USER_ID = "5895801825"
 
-headers = {
-    "User-Agent": "Mozilla/5.0",
-    "Referer": "https://ais.usvisa-info.com/es-mx/niv"
-}
+bot = Bot(token=BOT_TOKEN)
 
-def check_appointment():
-    response = requests.get(URL, headers=headers, cookies=cookies)
+def revisar_citas():
+    print("🔍 Revisando citas disponibles...")
 
-    if response.status_code != 200:
-        print(f"Error al consultar la página. Código {response.status_code}")
-        return
+    try:
+        url = "https://ais.usvisa-info.com/es-mx/niv/schedule/13639767/appointment/days/119.json?appointments[expedite]=false"
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json"
+        }
 
-    soup = BeautifulSoup(response.text, 'html.parser')
-    # Esto depende de cómo venga la cita en el HTML, ajústalo si es diferente:
-    available = soup.find('h3')
+        response = requests.get(url, headers=headers, cookies=cookies)
 
-    if available:
-        text = available.get_text(strip=True)
-        bot.send_message(chat_id=USER_ID, text=f"📅 Cita más cercana disponible:\n\n{text}")
-        print("Mensaje enviado por Telegram")
-    else:
-        print("No se encontró ninguna cita disponible")
+        if response.status_code != 200:
+            print(f"⚠️ Error en la solicitud: {response.status_code}")
+            return
 
-if __name__ == "__main__":
-    while True:
-        try:
-            check_appointment()
-        except Exception as e:
-            print(f"Error en la ejecución: {e}")
-        time.sleep(60)  # Espera 60 segundos antes de revisar otra vez
+        data = response.json()
+        if data:
+            fecha = data[0]["date"]
+            print(f"📆 Cita disponible: {fecha}")
+            mensaje = f"✅ ¡Cita más cercana disponible!: {fecha}"
+            bot.send_message(chat_id=USER_ID, text=mensaje)
+        else:
+            print("❌ No hay citas disponibles.")
+    except Exception as e:
+        print(f"❌ Error revisando citas: {e}")
+
+while True:
+    revisar_citas()
+    time.sleep(60)
